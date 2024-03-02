@@ -1,0 +1,142 @@
+<html>
+<head>
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
+  <script>
+    // Initialize web3
+    const web3 = new Web3(Web3.givenProvider || "https://taiko-katla.blockpi.network/v1/rpc/public");
+
+    // Set the chain id
+    const chainId = 167008;
+
+    // Set the contract address and abi
+    const contractAddress = "0xb1E93A7e9b227B27554AD838BE7b9C7FCC75Ce8F";
+    const contractAbi = [
+      {
+        "inputs": [],
+        "name": "deposit",
+        "outputs": [],
+        "stateMutability": "payable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          }
+        ],
+        "name": "withdraw",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      }
+    ];
+
+    // Create a contract instance
+    const contract = new web3.eth.Contract(contractAbi, contractAddress);
+
+    // Declare some variables to store the user's account and balance
+    let userAccount;
+    let userBalance;
+
+    // Function to connect to the wallet
+    async function connectWallet() {
+      try {
+        // Request access to the user's accounts
+        const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+        // Set the user's account
+        userAccount = accounts[0];
+        // Update the UI
+        document.getElementById("account").innerHTML = userAccount;
+        document.getElementById("connect-button").style.display = "none";
+        document.getElementById("deposit-button").style.display = "inline";
+        document.getElementById("withdraw-button").style.display = "inline";
+        document.getElementById("amount-input").style.display = "inline";
+        // Get the user's balance
+        getUserBalance();
+      } catch (error) {
+        // Handle any errors
+        console.error(error);
+        alert(error.message);
+      }
+    }
+
+    // Function to get the user's balance
+    async function getUserBalance() {
+      try {
+        // Call the contract's balanceOf function
+        const balance = await contract.methods.balanceOf(userAccount).call();
+        // Convert the balance from wei to ether
+        const etherBalance = web3.utils.fromWei(balance, 'ether');
+        // Update the UI
+        document.getElementById("balance").innerHTML = etherBalance + " ETH";
+      } catch (error) {
+        // Handle any errors
+        console.error(error);
+        alert(error.message);
+      }
+    }
+
+    // Function to deposit tokens to the contract
+    async function depositTokens() {
+      try {
+        // Get the amount from the input field
+        const amount = document.getElementById("amount-input").value;
+        // Validate the amount
+        if (amount <= 0) {
+          alert("Please enter a positive amount");
+          return;
+        }
+        // Convert the amount from ether to wei
+        const weiAmount = web3.utils.toWei(amount, 'ether');
+        // Send the transaction to the contract's deposit function
+        const tx = await contract.methods.deposit().send({ from: userAccount, value: weiAmount, chainId: chainId });
+        // Log the transaction hash
+        console.log(tx.transactionHash);
+        // Update the user's balance
+        getUserBalance();
+      } catch (error) {
+        // Handle any errors
+        console.error(error);
+        alert(error.message);
+      }
+    }
+
+    // Function to withdraw tokens from the contract
+    async function withdrawTokens() {
+      try {
+        // Get the amount from the input field
+        const amount = document.getElementById("amount-input").value;
+        // Validate the amount
+        if (amount <= 0) {
+          alert("Please enter a positive amount");
+          return;
+        }
+        // Convert the amount from ether to wei
+        const weiAmount = web3.utils.toWei(amount, 'ether');
+        // Send the transaction to the contract's withdraw function
+        const tx = await contract.methods.withdraw(weiAmount).send({ from: userAccount, chainId: chainId });
+        // Log the transaction hash
+        console.log(tx.transactionHash);
+        // Update the user's balance
+        getUserBalance();
+      } catch (error) {
+        // Handle any errors
+        console.error(error);
+        alert(error.message);
+      }
+    }
+  </script>
+</head>
+<body>
+  <h1>Token Locker Dapp</h1>
+  <p>Connect your wallet and interact with the functions on the Taiko Katla L2 network.</p>
+  <p>Account: <span id="account">Not connected</span></p>
+  <p>Balance: <span id="balance">0 ETH</span></p>
+  <button id="connect-button" onclick="connectWallet()">Connect Wallet</button>
+  <button id="deposit-button" onclick="depositTokens()" style="display: none;">Deposit</button>
+  <button id="withdraw-button" onclick="withdrawTokens()" style="display: none;">Withdraw</button>
+  <input id="amount-input" type="number" min="0" step="0.01" placeholder="Enter amount in ETH" style="display: none;">
+</body>
+</html>
